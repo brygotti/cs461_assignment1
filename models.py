@@ -1,4 +1,5 @@
 import torch.nn as nn
+from torchvision.models import resnet18
 
 class ImageEncoder(nn.Module):
     """
@@ -26,6 +27,8 @@ class ImageEncoder(nn.Module):
     proj_dim: int = 128
     #################################################
 
+    proj_hidden_dim: int = 2048
+
     def __init__(self):
         super().__init__()
 
@@ -34,14 +37,17 @@ class ImageEncoder(nn.Module):
         # Define the layers of the encoder and projector here
 
         # Encoder: flattens the image and learns a compact feature representation
-        self.encoder = nn.Sequential(
-            nn.Flatten(),
-            nn.Linear(self.input_channels * self.input_dim * self.input_dim, self.feature_dim),
-            nn.ReLU(),
-        )
+        enc = resnet18(weights=None)
+        enc.conv1 = nn.Conv2d(self.input_channels, 64, 3, 1, 1, bias=False)
+        enc.maxpool = nn.Identity()
+        self.encoder = enc
 
         # Projector: maps encoder features into the final embedding space
-        self.projector = nn.Linear(self.feature_dim, self.proj_dim)
+        self.projector = nn.Sequential(
+            nn.Linear(self.feature_dim, self.proj_hidden_dim),
+            nn.ReLU(inplace=True),
+            nn.Linear(self.proj_hidden_dim, self.proj_dim) # (bs, proj_dim)
+        )
         
         ######################################################################
 
