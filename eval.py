@@ -93,12 +93,14 @@ if __name__ == "__main__":
     
     checkpoint_path = work_dir / "final_model.safetensors"
     
-    model = ImageEncoder()
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Using device: {device}")
+    model = ImageEncoder().to(device)
     load_model(model, checkpoint_path)
     model.eval()
     
     try:
-        x = torch.randn(1, 3, 64, 64)
+        x = torch.randn(1, 3, 64, 64, device=device)
         with torch.no_grad():
             out = model.get_features(x)
         assert out.shape == (1, 1000), \
@@ -118,10 +120,10 @@ if __name__ == "__main__":
         )
     except FileNotFoundError as e:
         print(f"Dataset files not found in {data_dir}. Using random data for testing.")
-        train_images = torch.randn(100, 3, 64, 64)
-        train_labels = torch.randint(0, 10, (100,))
-        val_images = torch.randn(20, 3, 64, 64)
-        val_labels = torch.randint(0, 10, (20,))
+        train_images = torch.randn(100, 3, 64, 64, device=device)
+        train_labels = torch.randint(0, 10, (100,), device=device)
+        val_images = torch.randn(20, 3, 64, 64, device=device)
+        val_labels = torch.randint(0, 10, (20,), device=device)
         train_dataset = TensorDataset(train_images, train_labels)
         val_dataset = TensorDataset(val_images, val_labels)
 
