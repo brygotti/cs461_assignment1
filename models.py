@@ -1,5 +1,5 @@
 import torch.nn as nn
-from torchvision.models import resnet18
+from torchvision.models import resnet34
 
 class ImageEncoder(nn.Module):
     """
@@ -37,8 +37,8 @@ class ImageEncoder(nn.Module):
         # Define the layers of the encoder and projector here
 
         # Encoder: flattens the image and learns a compact feature representation
-        enc = resnet18(weights=None)
-        enc.conv1 = nn.Conv2d(self.input_channels, 64, 3, 1, 1, bias=False)
+        enc = resnet34(weights=None)
+        enc.conv1 = nn.Conv2d(self.input_channels, 64, 7, 1, 3, bias=False)
         enc.maxpool = nn.Identity()
         self.encoder = enc
 
@@ -64,7 +64,15 @@ class ImageEncoder(nn.Module):
         """
         features = self.encoder(x)   # (batch_size, ...)
         projected_features = self.projector(features)  # (batch_size, proj_dim)
+        projected_features = self.normalize(projected_features)
         return features, projected_features
+    
+    def normalize(self, x, eps=1e-8):
+        """
+        Normalizes a batch of feature vectors.
+        """
+        return x / (x.norm(dim=-1, keepdim=True) + eps)
+    
     
     def get_features(self, x):
         """
@@ -77,5 +85,6 @@ class ImageEncoder(nn.Module):
         Returns:
             torch.Tensor: Output features of shape (batch_size, feature_dim).
         """
+        x = self.normalize(x)
         features = self.encoder(x)
         return features
