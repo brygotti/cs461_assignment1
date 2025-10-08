@@ -135,7 +135,7 @@ if __name__ == "__main__":
     
     seed_all(42)  # For reproducibility, you can use any integer here
 
-    data_dir = Path('./cs461_assignment1_data/')
+    data_dir = Path('/shared/CS461/cs461_assignment1_data/')
     checkpoints_dir = Path('checkpoints')
     if not checkpoints_dir.exists():
         checkpoints_dir.mkdir(parents=True, exist_ok=False)
@@ -143,7 +143,7 @@ if __name__ == "__main__":
 
     simclr_transform = SimCLRTransform(size=64)
 
-    train_datasets = [ImageDatasetNPZ(data_dir / 'train.npz', transform=simclr_transform) for i in range(4)]
+    train_datasets = [ImageDatasetNPZ(data_dir / 'train.npz', transform=simclr_transform) for i in range(1)]
     train_dataset_no_augment = ImageDatasetNPZ(data_dir / 'train.npz', transform=default_transform)
     val_dataset_no_augment = ImageDatasetNPZ(data_dir / 'val.npz', transform=default_transform)
 

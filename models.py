@@ -1,5 +1,5 @@
 import torch.nn as nn
-from torchvision.models import resnet34
+from torchvision.models import resnet18
 
 class ImageEncoder(nn.Module):
     """
@@ -37,8 +37,8 @@ class ImageEncoder(nn.Module):
         # Define the layers of the encoder and projector here
 
         # Encoder: flattens the image and learns a compact feature representation
-        enc = resnet34(weights=None)
-        enc.conv1 = nn.Conv2d(self.input_channels, 64, 7, 1, 3, bias=False)
+        enc = resnet18(weights=None)
+        enc.conv1 = nn.Conv2d(self.input_channels, 64, 3, 1, 1, bias=False)
         enc.maxpool = nn.Identity()
         self.encoder = enc
 
