@@ -18,6 +18,10 @@ from safetensors.torch import save_model
 import wandb
 from torchsummary import summary
 
+import os
+
+os.environ["WANDB__SERVICE_WAIT"] = "300"
+
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 SCIPER = 325403  # Replace with your SCIPER number
