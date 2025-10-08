@@ -64,7 +64,15 @@ class ImageEncoder(nn.Module):
         """
         features = self.encoder(x)   # (batch_size, ...)
         projected_features = self.projector(features)  # (batch_size, proj_dim)
+        projected_features = self.normalize(projected_features)
         return features, projected_features
+    
+    def normalize(self, x, eps=1e-8):
+        """
+        Normalizes a batch of feature vectors.
+        """
+        return x / (x.norm(dim=-1, keepdim=True) + eps)
+    
     
     def get_features(self, x):
         """
@@ -77,5 +85,6 @@ class ImageEncoder(nn.Module):
         Returns:
             torch.Tensor: Output features of shape (batch_size, feature_dim).
         """
+        x = self.normalize(x)
         features = self.encoder(x)
         return features
