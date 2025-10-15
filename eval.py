@@ -6,6 +6,7 @@ import torch
 from torch.utils.data import DataLoader, TensorDataset
 from safetensors.torch import load_model
 import numpy as np
+from torchsummary import summary
 
 from utils import ImageDatasetNPZ, default_transform
 from utils import extract_features_and_labels, run_knn_probe, run_linear_probe
@@ -106,6 +107,7 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
     model = ImageEncoder().to(device)
+    print(summary(model, input_size=(3, 64, 64)))
     load_model(model, checkpoint_path)
     model.eval()
     
