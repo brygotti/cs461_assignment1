@@ -5,9 +5,11 @@ import importlib.util
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 from safetensors.torch import load_model
+import numpy as np
 
 from utils import ImageDatasetNPZ, default_transform
 from utils import extract_features_and_labels, run_knn_probe, run_linear_probe
+from utils import seed_all
 
 
 def evaluate_model(model, train_dataloader, val_dataloader, knn_k=5):
@@ -59,6 +61,12 @@ if __name__ == "__main__":
         default="val.npz",
         help="Path to the validation data file.",
     )
+    parser.add_argument(
+        "--ood-file",
+        type=str,
+        default="ood.npz",
+        help="Path to the OOD data file.",
+    )
     args = parser.parse_args()
 
     if args.submission_folder.startswith("$HOME"):
@@ -89,6 +97,8 @@ if __name__ == "__main__":
     assert spec.loader is not None
     spec.loader.exec_module(module)
 
+    seed_all(42)
+
     ImageEncoder = module.ImageEncoder  
     
     checkpoint_path = work_dir / "final_model.safetensors"
@@ -111,28 +121,33 @@ if __name__ == "__main__":
     
     # Load datasets
     data_dir = Path(args.data_dir)
-    try:
-        train_dataset = ImageDatasetNPZ(
-            data_dir / args.train_file, transform=default_transform
-        )
-        val_dataset = ImageDatasetNPZ(
-            data_dir / args.val_file, transform=default_transform
-        )
-    except FileNotFoundError as e:
-        print(f"Dataset files not found in {data_dir}. Using random data for testing.")
-        train_images = torch.randn(100, 3, 64, 64, device=device)
-        train_labels = torch.randint(0, 10, (100,), device=device)
-        val_images = torch.randn(20, 3, 64, 64, device=device)
-        val_labels = torch.randint(0, 10, (20,), device=device)
-        train_dataset = TensorDataset(train_images, train_labels)
-        val_dataset = TensorDataset(val_images, val_labels)
+    train_dataset = ImageDatasetNPZ(
+        data_dir / args.train_file, transform=default_transform
+    )
+    val_dataset = ImageDatasetNPZ(
+        data_dir / args.val_file, transform=default_transform
+    )
+    ood_dataset = ImageDatasetNPZ(
+        data_dir / args.ood_file, transform=default_transform
+    )
+    rng = np.random.RandomState(42)
+    ood_val_ratio = 0.2
+    ood_train_mask = rng.permutation(len(ood_dataset)) >= int(len(ood_dataset) * ood_val_ratio)
+    ood_train_dataset = torch.utils.data.Subset(ood_dataset, np.where(ood_train_mask)[0])
+    ood_val_dataset = torch.utils.data.Subset(ood_dataset, np.where(~ood_train_mask)[0])
 
-    train_dataloader = DataLoader(train_dataset, batch_size=64, shuffle=False, num_workers=4)
+    train_dataloader = DataLoader(train_dataset, batch_size=64, shuffle=True, num_workers=4)
     val_dataloader = DataLoader(val_dataset, batch_size=64, shuffle=False, num_workers=4)
+
+    ood_train_dataloader = DataLoader(ood_train_dataset, batch_size=64, shuffle=True, num_workers=4)
+    ood_val_dataloader = DataLoader(ood_val_dataset, batch_size=64, shuffle=False, num_workers=4)
 
     # Evaluate model
     knn_accuracy, probe_accuracy = evaluate_model(model, train_dataloader, val_dataloader)
     print(f"k-NN Accuracy: {knn_accuracy:.2f}%")
     print(f"Linear Probe Accuracy: {probe_accuracy:.2f}%")
+    ood_knn_accuracy, ood_probe_accuracy = evaluate_model(model, ood_train_dataloader, ood_val_dataloader)
+    print(f"OOD k-NN Accuracy: {ood_knn_accuracy:.2f}%")
+    print(f"OOD Linear Probe Accuracy: {ood_probe_accuracy:.2f}%")
     
     print("Evaluation completed.")
